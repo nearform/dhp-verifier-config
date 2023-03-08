@@ -51,10 +51,11 @@ const getAllVerifierConfig = async (req, res) => {
         logger.info(`GetAll VerifierConfig`, txID);
         // const result = await daoCustomer.getAllCustomers(txID);
 
+        const result = await vconfDao.getVerifierConfigurations();
         logger.response(200, `Success`, txID);
         return res.status(200).json({
             type: constants.API_TYPENAME.VERIFIER_CONFIGURATION_COLLECTION ,
-            payload: { data: result }
+            payload: result
         });
     } catch (error) {
         return logAndSendErrorResponse(txID, res, { statusCode: error.statusCode, message: error.message }, 'getAllVerifierConfig')

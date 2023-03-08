@@ -99,8 +99,10 @@ class CouchDB extends NoSqlDB {
         const db = getDB(dbName);
 
         try {
-            const response = await db.get(docID);
-            return dbHelper.removeUnderscores(response);
+            const response = await db.get(id);
+            const result = dbHelper.removeUnderscores(response);
+            result.id = id
+            return result
         } catch(err) {
             return dbHelper.handleError(err, 'getDoc', docID);
         }

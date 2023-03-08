@@ -17,12 +17,15 @@ const logger = new Logger('verifier-configapi-dao');
 
 const getVerifierConfigurations = async (id, version) => {
     try {
-        const retDoc = await dbHelper.getInstance().getDoc(
-            constants.NOSQL_CONTAINER_ID.VERIFIER_CONFIGURATIONS_ENTITY, id, version
-        );
-        const payload = await dbHelper.getInstance().sanitizeDoc(retDoc);
-        
-        return payload;
+        if (id && version) {
+            const retDoc = await dbHelper.getInstance().getDoc(constants.NOSQL_CONTAINER_ID.VERIFIER_CONFIGURATIONS_ENTITY, id, version);
+            return await dbHelper.getInstance().sanitizeDoc(retDoc);
+        } 
+
+        const retDocs = await dbHelper.getInstance().getAllDocs(constants.NOSQL_CONTAINER_ID.VERIFIER_CONFIGURATIONS_ENTITY);
+        // TODO: sanitizeDoc
+      
+        return retDocs.payload;
     } catch(err) {
         const { errorStatus } = getErrorInfo(err);
         if (errorStatus === 404) {
