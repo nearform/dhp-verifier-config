@@ -10,6 +10,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const dbHelper = require('./helpers/nosql-db-helper');
 const apiRoutes = require('./routes/api-routes');
+const healthRoutes = require('./routes/health');
 const controller = require('./controllers/verifier-configapi');
 
 const app = express();
@@ -23,6 +24,7 @@ const useHttps = process.env.USE_HTTPS
 
 app.use(bodyParser.json());
 
+app.use(`${contextRoot}/health`, healthRoutes);
 app.use(`${contextRoot}/`, apiRoutes);
 
 app.listen(port, async () => {
@@ -30,4 +32,3 @@ app.listen(port, async () => {
     // run service
     console.log(`\n\nServer started successfully on port ${port}`);
 });
-
