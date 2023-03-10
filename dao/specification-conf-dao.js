@@ -1,3 +1,7 @@
+/* eslint-disable no-return-await */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
+/* eslint-disable complexity */
 /**
  * (c) Copyright Merative US L.P. and others 2020-2022 
  *
@@ -53,88 +57,76 @@ const CREDENTIAL_CATEGORY = "credential-category";
 const CREDENTIAL_SPEC = "credential-spec";
 
 const getExpandedSpecificationConf = async (id, version) => {
-    let specConf;
-    try {
-        specConf = await getSpecificationConf(id, version);
-    } catch(err) {
-        throw err;
-    }
-    configBroken = false;
-    //expandSpecificationConfigurationConfigs : embedded ids
+    const specConf = await getSpecificationConf(dbHelper.stringifyIdVersion(id, version), version)
+    let configBroken = false;
+    // expandSpecificationConfigurationConfigs : embedded ids
     try {    
-        logger.debug(`Expanding SpecificationConf`); 
-        if(specConf["trustLists"]) {
-            let trustListsExp = [];
-            for (trustObj of specConf["trustLists"]) {
-                let tl = await trustListDao.getTrustList(trustObj.id, trustObj.version);
+        if(specConf.trustLists) {
+            const trustListsExp = [];
+            for await (const trustObj of specConf.trustLists) {
+                const version = trustObj.version === 'latest' ? '1.0.0' : trustObj.version
+                const tl = await trustListDao.getTrustList(dbHelper.stringifyIdVersion(trustObj.id, version), version);
+                // const tl = await trustListDao.getTrustList(trustObj.id, trustObj.version);
                 trustListsExp.push(tl);  
             }            
-            specConf["trustLists"] = trustListsExp;
+            specConf.trustLists = trustListsExp;
         }
-
-    } catch(err) {
-        configBroken = true;
-    }        
-        
-    try {    
-        if(specConf["rules"]) {
-            let rulesExp = [];
-            for (rObj of specConf["rules"]) {
-                let tl = await ruleDao.getRule(rObj.id, rObj.version);
+   
+        if(specConf.rules) {
+            const rulesExp = [];
+            for await(const rObj of specConf.rules) {
+                const version = rObj.version === 'latest' ? '1.0.0' : rObj.version
+                const tl = await ruleDao.getRule(dbHelper.stringifyIdVersion(rObj.id, version), version);
+                // const tl = await ruleDao.getRule(rObj.id, rObj.version);
                 rulesExp.push(tl);  
             }            
-            specConf["rules"] = rulesExp;
+            specConf.rules = rulesExp;
         }
 
-    } catch(err) {
-        configBroken = true;
-    }        
-    
-    try {    
-        if(specConf["display"]) {
-            let displayExp = [];
-            for (dObj of specConf["display"]) {
-                let tl = await displaysDao.getDisplays(dObj.id, dObj.version);
+        if(specConf.display) {
+            const displayExp = [];
+            for (const dObj of specConf.display) {
+                const version = dObj.version === 'latest' ? '1.0.0' : dObj.version
+                const tl = await displaysDao.getDisplays(dbHelper.stringifyIdVersion(dObj.id, version), version);
+                // const tl = await displaysDao.getDisplays(dObj.id, dObj.version);
                 displayExp.push(tl);  
             }            
-            specConf["display"] = displayExp;
+            specConf.display = displayExp;
         }
-    } catch(err) {
-        configBroken = true;
-    }        
 
-    try {    
-        if(specConf["classifierRule"]) {
-            specConf["classifierRule"] = await classifierRulesDao.getClassifierRules(specConf["classifierRule"].id, specConf["classifierRule"].version);                
+        if(specConf.classifierRule) {
+            const version = specConf.classifierRule.version === 'latest' ? '1.0.0' : specConf.classifierRule.version
+            specConf.classifierRule = await classifierRulesDao.getClassifierRules(dbHelper.stringifyIdVersion(specConf.classifierRule.id, version), version);                
+            // specConf.classifierRule = await classifierRulesDao.getClassifierRules(specConf.classifierRule.id, specConf.classifierRule.version);                
         }
     } catch(err) {
         configBroken = true;
-    }        
+    }
 
     try {
         // validate CredentialSpecDisplayValue
-        if(specConf["credentialSpec"]) {
-            let confValue = specConf["credentialSpec"];
-            delete specConf["credentialSpec"];
-            let entityToValidate = await masterdataDao.getMasterData(CREDENTIAL_SPEC);
-            if(entityToValidate["items"]) {
-                for (item of entityToValidate["items"]) {
+        if(specConf.credentialSpec) {
+            const confValue = specConf.credentialSpec;
+            delete specConf.credentialSpec;
+            const entityToValidate = await masterdataDao.getMasterData(dbHelper.stringifyIdVersion(CREDENTIAL_SPEC, '1.0.0'));
+            if(entityToValidate.items) {
+                for (const item of entityToValidate.items) {
                     if(item.id ===confValue) {
-                        specConf["credentialSpec"] = confValue;
+                        specConf.credentialSpec = confValue;
                         break;
                     }
                 }   
             }               
         }
 
-        if(specConf["credentialCategory"]) {
-            let confValue = specConf["credentialCategory"];
-            delete specConf["credentialCategory"];
-            let entityToValidate = await masterdataDao.getMasterData(CREDENTIAL_CATEGORY);
-            if(entityToValidate["items"]) {
-                for (item of entityToValidate["items"]) {
+        if(specConf.credentialCategory) {
+            const confValue = specConf.credentialCategory;
+            delete specConf.credentialCategory;
+            const entityToValidate = await masterdataDao.getMasterData(dbHelper.stringifyIdVersion(CREDENTIAL_CATEGORY, '1.0.0'));
+            if(entityToValidate.items) {
+                for (const item of entityToValidate.items) {
                     if(item.id ===confValue) {
-                        specConf["credentialCategory"] = confValue;
+                        specConf.credentialCategory = confValue;
                         break;
                     }
                 }   
@@ -155,7 +147,7 @@ const getExpandedSpecificationConf = async (id, version) => {
             `Verifier configuration is broken. Details id: ${id} version: ${version}`
         ); 
 
-    return await dbHelper.getInstance().sanitizeDoc(specConf);  
+    return dbHelper.getInstance().sanitizeDoc(specConf);  
 }
 
 

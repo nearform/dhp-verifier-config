@@ -5,12 +5,13 @@
  * 
 */
 
+const { stringify } = require('querystring');
 const dbHelper = require('../helpers/nosql-db-helper');
 const constants = require('../helpers/constants');
 const { getErrorInfo } = require('../helpers/utils');
 
-const { stringify } = require('querystring');
 const Logger = require('../config/logger');
+
 const logger = new Logger('trustList-dao');
 
 

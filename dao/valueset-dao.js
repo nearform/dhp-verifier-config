@@ -10,12 +10,14 @@ const constants = require('../helpers/constants');
 const { getErrorInfo } = require('../helpers/utils');
 
 const Logger = require('../config/logger');
+
 const logger = new Logger('valueSets-dao');
 
 const getValueSets = async (id, version) => {
     try {
+        const updatedVersion = (!version || version === 'latest') ? '1.0.0' : version
         const retDoc = await dbHelper.getInstance().getDoc(
-            constants.NOSQL_CONTAINER_ID.VALUE_SET_ENTITY, id, version
+            constants.NOSQL_CONTAINER_ID.VALUE_SET_ENTITY, id, updatedVersion
         );
         return await dbHelper.getInstance().sanitizeDoc(retDoc);
     } catch(err) {
