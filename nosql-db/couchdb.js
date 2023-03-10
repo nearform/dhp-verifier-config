@@ -1,3 +1,4 @@
+/* eslint-disable no-param-reassign */
 /**
  * (c) Copyright Merative US L.P. and others 2020-2022
  *
@@ -19,8 +20,8 @@ const logger = new Logger('couchdb');
 const couch = nano(process.env.COUCHDB_URL);
 
 
-let verConfigDB, masterDataDB, displayDB, specificationConfigDB ;
-let ruleDB, ruleSetDB, trustListDB, valueSetDB, classifierRuleDB ;
+let verConfigDB; let masterDataDB; let displayDB; let specificationConfigDB ;
+let ruleDB; let ruleSetDB; let trustListDB; let valueSetDB; let classifierRuleDB ;
 
 
 const getDB = (dbName) => {
@@ -93,7 +94,7 @@ class CouchDB extends NoSqlDB {
 
     // eslint-disable-next-line class-methods-use-this
     async getDoc(dbName, id, version) {
-        let docID = dbHelper.stringifyIdVersion(id, version);
+        const docID = dbHelper.stringifyIdVersion(id, version);
         logger.debug(`getDoc ${docID} from ${dbName} database`);
         
         const db = getDB(dbName);
@@ -101,10 +102,21 @@ class CouchDB extends NoSqlDB {
         try {
             const response = await db.get(id);
             const result = dbHelper.removeUnderscores(response);
-            result.id = id
             return result
         } catch(err) {
             return dbHelper.handleError(err, 'getDoc', docID);
+        }
+    };
+
+    // eslint-disable-next-line class-methods-use-this
+    async findDocByQuery(dbName, query) {
+        logger.debug(`findDocByQuery ${query} from ${dbName} database`);
+        const db = getDB(dbName);
+        try {
+            const response = await db.find(query)
+            return response ? dbHelper.removeUnderscores(response) : {}
+        } catch(err) {
+            return dbHelper.handleError(err, 'findDocByQuery');
         }
     };
 
@@ -126,7 +138,10 @@ class CouchDB extends NoSqlDB {
                 total_rows: response.rows.length,
                 limit,
                 skip,
-                payload: response.rows,
+                payload: response.rows.map(row => {
+                    row.id = row._id;
+                    return row
+                }),
             };
         } catch(err) {
             const { errorStatus, errorMsg } = getErrorInfo(err);

@@ -24,6 +24,11 @@ class NoSqlDB {
         this.verifyInstance('getDoc');
         return this.instance.getDoc(containerId, id, version);
     };
+    
+    async findDocByQuery(containerId, query) {
+        this.verifyInstance('findDocByQuery');
+        return this.instance.findDocByQuery(containerId, query);
+    };
 
     async getAllDocs(containerId, limit, skip) {
         this.verifyInstance('getDoc');

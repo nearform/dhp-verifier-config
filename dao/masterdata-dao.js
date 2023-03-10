@@ -17,10 +17,9 @@ const logger = new Logger('masterData-dao');
 
 const getMasterData = async (id, version) => {
     try {
-        if(!version)
-            version = "1.0.0"; //todo Support latest
+        const updatedVersion = (!version || version === 'latest') ? '1.0.0' : version
         const retDoc = await dbHelper.getInstance().getDoc(
-            constants.NOSQL_CONTAINER_ID.MASTER_DATA_ENTITY, id, version
+            constants.NOSQL_CONTAINER_ID.MASTER_DATA_ENTITY, id, updatedVersion
         );
         return await dbHelper.getInstance().sanitizeDoc(retDoc);
     } catch(err) {

@@ -18,6 +18,11 @@ const logger = new Logger('verifier-configapi-controller');
  
 
 const getVerifierConfig = async (req, res) => {
+    // skip legacy requests
+    if (req.query.customer_id) {
+        return res.status(201).json({});
+    }
+
     const txID = req.headers[constants.REQUEST_HEADERS.TRANSACTION_ID];
     
     try {

@@ -1,3 +1,7 @@
+/* eslint-disable prefer-destructuring */
+/* eslint-disable complexity */
+/* eslint-disable no-await-in-loop */
+/* eslint-disable no-restricted-syntax */
 /**
  * (c) Copyright Merative US L.P. and others 2020-2022 
  *
@@ -12,20 +16,48 @@ const valueSetDao = require('./valueset-dao');
 const specificationConfDao = require('./specification-conf-dao');
 const { getErrorInfo } = require('../helpers/utils');
 const Logger = require('../config/logger');
+
 const logger = new Logger('verifier-configapi-dao');
 
+const credentialSpec = {
+    "DCC": "EU Digital COVID Certificate",
+    "GHP": "Good Health Pass",
+    "IDHP": "Digital Health Pass",
+    "SHC": "Smart Health Card",
+    "VC": "Verifiable Credential",
+}
+
+const credentialCategory = {
+    "VACCINATION": "COVID-19 Vaccination",
+    "TEST": "COVID-19 Test Result",
+    "RECOVERY": "COVID-19 Recovery",
+    "TEMPERATURE": "Temperature Scan",
+    "PASS": "Pass",
+    "GENERIC": "Generic Credential",
+}
 
 const getVerifierConfigurations = async (id, version) => {
+    logger.info(`getVerifierConfigurations - id=${id}, version=${version}`)
     try {
         if (id && version) {
-            const retDoc = await dbHelper.getInstance().getDoc(constants.NOSQL_CONTAINER_ID.VERIFIER_CONFIGURATIONS_ENTITY, id, version);
-            return await dbHelper.getInstance().sanitizeDoc(retDoc);
-        } 
+            const stringifiedId = id && version && !id.includes(';') ? dbHelper.stringifyIdVersion(id, version) : id
+            const updatedVersion = (!version || version === 'latest') ? '1.0.0' : version
 
+            const retDoc = await dbHelper.getInstance().getDoc(constants.NOSQL_CONTAINER_ID.VERIFIER_CONFIGURATIONS_ENTITY, stringifiedId, updatedVersion);
+            if (!retDoc) throw new Error('VerifierConfigurations not found')
+
+            return retDoc;
+        }
         const retDocs = await dbHelper.getInstance().getAllDocs(constants.NOSQL_CONTAINER_ID.VERIFIER_CONFIGURATIONS_ENTITY);
         // TODO: sanitizeDoc
-      
-        return retDocs.payload;
+        const allDocs = retDocs.payload || []
+        return allDocs.map(d => {
+            const document = d.doc;
+            document.id = document._id.split(';')[0];
+            delete document._id
+            delete document._rev
+            return document
+        })
     } catch(err) {
         const { errorStatus } = getErrorInfo(err);
         if (errorStatus === 404) {
@@ -81,35 +113,30 @@ const deleteVerifierConfigurations = async (eID) => {
 }
 
 const getExpandedVerifierConfigurations = async (id, version) => {
-
-    let retrievedConf;
-    try {
-        retrievedConf = await getVerifierConfigurations(id,version);
-    } catch(err) {
-        throw err;
-    }
+    const retrievedConf = await getVerifierConfigurations(dbHelper.stringifyIdVersion(id, version), version)
 
     try {
         logger.info(`Expanding entities in  VerifierConfiguration: ${id} ${version}`);
         
-        if(retrievedConf["specificationConfigurations"]) {
-            let confListsExp = [];
-            for (specObj of retrievedConf["specificationConfigurations"]) {
-                let tl = await specificationConfDao.getExpandedSpecificationConf(specObj.id, specObj.version);
-                confListsExp.push(tl);  
-            }            
-            retrievedConf["specificationConfigurations"] = confListsExp;
+        if(retrievedConf.specificationConfigurations) {
+            const confListsExp = [];
+            for (const specObj of retrievedConf.specificationConfigurations) {
+                const tl = await specificationConfDao.getExpandedSpecificationConf(specObj.id, specObj.version);
+                tl.credentialSpecDisplayValue = credentialSpec[tl.credentialSpec]
+                tl.credentialCategoryDisplayValue = credentialCategory[tl.credentialCategory]
+                confListsExp.push(tl);
+            }
+            retrievedConf.specificationConfigurations = confListsExp;
         }
         
-
         // valueSets
-        if(retrievedConf["valueSets"]) {
-            let confListsExp = [];
-            for (specObj of retrievedConf["valueSets"]) {
-                let tl = await valueSetDao.getValueSets(specObj.id, specObj.version);
+        if(retrievedConf.valueSets) {
+            const confListsExp = [];
+            for (const specObj of retrievedConf.valueSets) {
+                const tl = await valueSetDao.getValueSets(dbHelper.stringifyIdVersion(specObj.id, version), specObj.version);
                 confListsExp.push(tl);  
             }            
-            retrievedConf["valueSets"] = confListsExp;
+            retrievedConf.valueSets = confListsExp;
         }
         
         return await dbHelper.getInstance().sanitizeDoc(retrievedConf);  
@@ -120,7 +147,7 @@ const getExpandedVerifierConfigurations = async (id, version) => {
             error.status = errorStatus;
             throw error;
         }
-        log.error(`VerifierConfiguration element lookup failed : ${err}`);
+        logger.error(`VerifierConfiguration element lookup failed : ${err}`);
         throw err;
     }   
 }

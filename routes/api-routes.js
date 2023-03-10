@@ -18,7 +18,7 @@ const router = express.Router();
 
 // todo checkAuthUser
 
-router.get("/verifier-configurations",  requestLogger, verifierconfigController.getAllVerifierConfig);
+router.get("/verifier-configurations",  requestLogger, verifierconfigController.getVerifierConfig);
 
 router.post('/verifier-configurations', requestLogger, verifierconfigController.addVerifierConfig);
 
